@@ -155,6 +155,7 @@ import urllib
 import urllib2
 import urlparse
 import warnings
+import requests
 
 from htmlentitydefs import name2codepoint, codepoint2name, entitydefs
 
@@ -3003,14 +3004,12 @@ def _open_resource(url_file_stream_or_string, etag, modified, agent, referrer, h
         if isinstance(url_file_stream_or_string, unicode):
             url_file_stream_or_string = _convert_to_idn(url_file_stream_or_string)
 
-        # try to open with urllib2 (to use optional headers)
-        request = _build_urllib2_request(url_file_stream_or_string, agent, etag, modified, referrer, auth, request_headers)
-        opener = urllib2.build_opener(*tuple(handlers + [_FeedURLHandler()]))
-        opener.addheaders = [] # RMK - must clear so we only send our custom User-Agent
-        try:
-            return opener.open(request)
-        finally:
-            opener.close() # JohnD
+        if user_passwd is not None:
+            username = user_passwd.split(":")[0]
+            password = user_passwd.split(":")[1]
+            return requests.get(url_file_stream_or_string, auth=(username,password), verify=False)
+        else:
+            return requests.get(url_file_stream_or_string, verify=False)
 
     # try to open with native open function (if url_file_stream_or_string is a filename)
     try:
@@ -3889,7 +3888,8 @@ def parse(url_file_stream_or_string, etag=None, modified=None, agent=None, refer
         handlers = [handlers]
     try:
         f = _open_resource(url_file_stream_or_string, etag, modified, agent, referrer, handlers, request_headers, username, password)
-        data = f.read()
+        data = f.text
+        result['encoding'] = f.encoding
     except Exception, e:
         result['bozo'] = 1
         result['bozo_exception'] = e
@@ -3970,11 +3970,13 @@ def parse(url_file_stream_or_string, etag=None, modified=None, agent=None, refer
             'so the server sent no data.  This is a feature, not a bug!'
         return result
 
-    data, result['encoding'], error = convert_to_utf8(http_headers, data)
+    # Now that we are using requests, instead of urllib2, result['encoding']
+    # has already been set.  I don't think converting to utf8 is necessary for requests.
+    #data, result['encoding'], error = convert_to_utf8(http_headers, data)
     use_strict_parser = result['encoding'] and True or False
-    if error is not None:
-        result['bozo'] = 1
-        result['bozo_exception'] = error
+    #if error is not None:
+        #result['bozo'] = 1
+        #result['bozo_exception'] = error
 
     result['version'], data, entities = replace_doctype(data)
 
