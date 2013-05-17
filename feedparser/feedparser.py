@@ -2938,7 +2938,7 @@ class _FeedURLHandler(urllib2.HTTPDigestAuthHandler, urllib2.HTTPRedirectHandler
         self.reset_retry_count()
         return retry
 
-def _open_resource(url_file_stream_or_string, etag, modified, agent, referrer, handlers, request_headers):
+def _open_resource(url_file_stream_or_string, etag, modified, agent, referrer, handlers, request_headers, username, password):
     """URL, filename, or string --> stream
 
     This function lets you define parsers that take any input source
@@ -2982,16 +2982,22 @@ def _open_resource(url_file_stream_or_string, etag, modified, agent, referrer, h
             url_file_stream_or_string = 'http:' + url_file_stream_or_string[5:]
         if not agent:
             agent = USER_AGENT
-        # Test for inline user:password credentials for HTTP basic auth
+        user_passwd = None
         auth = None
-        if base64 and not url_file_stream_or_string.startswith('ftp:'):
-            urltype, rest = urllib.splittype(url_file_stream_or_string)
-            realhost, rest = urllib.splithost(rest)
-            if realhost:
-                user_passwd, realhost = urllib.splituser(realhost)
-                if user_passwd:
-                    url_file_stream_or_string = '%s://%s%s' % (urltype, realhost, rest)
-                    auth = base64.standard_b64encode(user_passwd).strip()
+        # Test for username and password
+        if username is not None and password is not None:
+            user_passwd = username + ":" + password
+            auth = base64.standard_b64encode(user_passwd).strip()
+        if user_passwd is None:
+            # Test for inline user:password credentials for HTTP basic auth
+            if base64 and not url_file_stream_or_string.startswith('ftp:'):
+                urltype, rest = urllib.splittype(url_file_stream_or_string)
+                realhost, rest = urllib.splithost(rest)
+                if realhost:
+                    user_passwd, realhost = urllib.splituser(realhost)
+                    if user_passwd:
+                        url_file_stream_or_string = '%s://%s%s' % (urltype, realhost, rest)
+                        auth = base64.standard_b64encode(user_passwd).strip()
 
         # iri support
         if isinstance(url_file_stream_or_string, unicode):
@@ -3861,7 +3867,7 @@ def replace_doctype(data):
                       for k, v in RE_SAFE_ENTITY_PATTERN.findall(replacement))
     return version, data, safe_entities
 
-def parse(url_file_stream_or_string, etag=None, modified=None, agent=None, referrer=None, handlers=None, request_headers=None, response_headers=None):
+def parse(url_file_stream_or_string, etag=None, modified=None, agent=None, referrer=None, handlers=None, request_headers=None, response_headers=None, username=None, password=None):
     '''Parse a feed from a URL, file, stream, or string.
 
     request_headers, if given, is a dict from http header name to value to add
@@ -3882,7 +3888,7 @@ def parse(url_file_stream_or_string, etag=None, modified=None, agent=None, refer
     if not isinstance(handlers, list):
         handlers = [handlers]
     try:
-        f = _open_resource(url_file_stream_or_string, etag, modified, agent, referrer, handlers, request_headers)
+        f = _open_resource(url_file_stream_or_string, etag, modified, agent, referrer, handlers, request_headers, username, password)
         data = f.read()
     except Exception, e:
         result['bozo'] = 1
