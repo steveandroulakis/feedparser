@@ -2964,9 +2964,13 @@ def _open_resource(url_file_stream_or_string, etag, modified, agent, referrer, r
         if user_passwd is not None:
             username = user_passwd.split(":")[0]
             password = user_passwd.split(":")[1]
-            return requests.get(url_file_stream_or_string, auth=(username,password), verify=False)
+            session = requests.Session()
+            session.max_redirects = 100
+            return session.get(url_file_stream_or_string, auth=(username,password), verify=False, timeout=600)
         else:
-            return requests.get(url_file_stream_or_string, verify=False)
+            session = requests.Session()
+            session.max_redirects = 100            
+            return session.get(url_file_stream_or_string, verify=False, timeout=600)
 
     # try to open with native open function (if url_file_stream_or_string is a filename)
     try:
