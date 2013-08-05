@@ -2967,6 +2967,7 @@ def _open_resource(url_file_stream_or_string, etag, modified, agent, referrer, r
             password = user_passwd.split(":")[1]
             session = requests.Session()
             session.max_redirects = 100
+            print 'getting: ' + str(url_file_stream_or_string) 
             return session.get(url_file_stream_or_string, auth=(username,password), verify=False, timeout=20000)
         else:
             session = requests.Session()
