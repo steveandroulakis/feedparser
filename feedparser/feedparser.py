@@ -2962,11 +2962,12 @@ def _open_resource(url_file_stream_or_string, etag, modified, agent, referrer, r
             url_file_stream_or_string = _convert_to_idn(url_file_stream_or_string)
 
         if user_passwd is not None:
+            requests.adapters.DEFAULT_RETRIES = 5
             username = user_passwd.split(":")[0]
             password = user_passwd.split(":")[1]
             session = requests.Session()
             session.max_redirects = 100
-            return session.get(url_file_stream_or_string, auth=(username,password), verify=False, timeout=600)
+            return session.get(url_file_stream_or_string, auth=(username,password), verify=False, timeout=20000)
         else:
             session = requests.Session()
             session.max_redirects = 100            
